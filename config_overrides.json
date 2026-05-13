@@ -1,0 +1,23 @@
+{
+  "AGENT_CONFIG": {
+    "max_cycles": 20,
+    "step_delay": 1.15,
+    "post_action_delay": 1.2,
+    "type_interval": 0.04,
+    "scroll_amount": 5,
+    "drag_duration": 0.5
+  },
+  "OLLAMA_CONFIG": {
+    "model": "qwen3.5:397B-cloud",
+    "base_url": "http://localhost:11434",
+    "temperature": 0.1,
+    "max_tokens": 4096,
+    "timeout": 180
+  },
+  "UI_CONFIG": {
+    "window_title": "SAYDO - GUI Agent",
+    "screenshot_min_w": 1920,
+    "elements_min_w": 1080,
+    "chat_min_w": 420
+  }
+}
