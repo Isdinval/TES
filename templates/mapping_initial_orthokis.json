@@ -1,0 +1,125 @@
+{
+  "schema_version": "1.0",
+  "mapper_mode": true,
+  "software": {
+    "name": "Orthokis",
+    "vendor": "Arakis",
+    "version": "unknown"
+  },
+  "context": {
+    "source": "SAYDO",
+    "target": "Orthokis",
+    "screen": "Fiche Patient",
+    "notes": "Template initial créé manuellement pour auto-mapping + validation humaine"
+  },
+  "fields": [
+    {
+      "logical_key": "nom_patient",
+      "ui_type": "text_input",
+      "path": "Fiche Patient > Identité",
+      "action": "click_then_type",
+      "required": true,
+      "mapped": false,
+      "human_validated": false
+    },
+    {
+      "logical_key": "prenom_patient",
+      "ui_type": "text_input",
+      "path": "Fiche Patient > Identité",
+      "action": "click_then_type",
+      "required": true,
+      "mapped": false,
+      "human_validated": false
+    },
+    {
+      "logical_key": "date_naissance",
+      "ui_type": "text_input",
+      "path": "Fiche Patient > Identité",
+      "action": "click_then_type",
+      "required": true,
+      "mapped": false,
+      "human_validated": false
+    },
+    {
+      "logical_key": "telephone",
+      "ui_type": "text_input",
+      "path": "Fiche Patient > Contact",
+      "action": "click_then_type",
+      "required": false,
+      "mapped": false,
+      "human_validated": false
+    },
+    {
+      "logical_key": "email",
+      "ui_type": "text_input",
+      "path": "Fiche Patient > Contact",
+      "action": "click_then_type",
+      "required": false,
+      "mapped": false,
+      "human_validated": false
+    },
+    {
+      "logical_key": "adresse",
+      "ui_type": "text_input",
+      "path": "Fiche Patient > Contact",
+      "action": "click_then_type",
+      "required": false,
+      "mapped": false,
+      "human_validated": false
+    },
+    {
+      "logical_key": "motif_consultation",
+      "ui_type": "text_input",
+      "path": "Fiche Patient > Consultation",
+      "action": "click_then_type",
+      "required": false,
+      "mapped": false,
+      "human_validated": false
+    },
+    {
+      "logical_key": "diagnostic_squelettique",
+      "ui_type": "text_input",
+      "path": "Fiche Patient > Diagnostic",
+      "action": "click_then_type",
+      "required": true,
+      "mapped": false,
+      "human_validated": false
+    },
+    {
+      "logical_key": "diagnostic_dentaire",
+      "ui_type": "text_input",
+      "path": "Fiche Patient > Diagnostic",
+      "action": "click_then_type",
+      "required": true,
+      "mapped": false,
+      "human_validated": false
+    },
+    {
+      "logical_key": "plan_traitement",
+      "ui_type": "text_input",
+      "path": "Fiche Patient > Plan de traitement",
+      "action": "click_then_type",
+      "required": true,
+      "mapped": false,
+      "human_validated": false
+    },
+    {
+      "logical_key": "commentaire_clinique",
+      "ui_type": "text_input",
+      "path": "Fiche Patient > Commentaires",
+      "action": "click_then_type",
+      "required": false,
+      "mapped": false,
+      "human_validated": false
+    },
+    {
+      "logical_key": "bouton_enregistrer",
+      "ui_type": "button",
+      "path": "Fiche Patient > Actions",
+      "action": "click",
+      "required": true,
+      "mapped": false,
+      "human_validated": false
+    }
+  ]
+}

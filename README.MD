@@ -146,6 +146,15 @@ python main.py
 
 ---
 
+
+## Démarrage rapide (création du mapping initial)
+
+1. Ouvrir l'application.
+2. Cliquer **📄 Charger mapping JSON** et sélectionner `templates/mapping_initial_orthokis.json`.
+3. Cliquer **📸 Parse** pour lancer la détection.
+4. Cliquer **🧩 Éditer mapping** pour compléter/corriger (ajout/suppression de champs, assignation bbox).
+5. Cliquer **🗺️ Export JSON final** pour générer le mapping final.
+
 ## Notes de qualité
 
 - Le mapping dépend de la qualité visuelle de la capture (zoom OS, thème, DPI, contraste).
