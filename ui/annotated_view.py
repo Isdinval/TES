@@ -72,7 +72,7 @@ class AnnotatedView(QWidget):
         self.setSizePolicy(QSizePolicy.Policy.Expanding,
                            QSizePolicy.Policy.Expanding)
         self.setMinimumSize(600, 400)
-        self.setStyleSheet("background:#1a1a2e; border-radius:8px;")
+        self.setStyleSheet("background:#0b1220; border:1px solid #263248; border-radius:10px;")
 
         # Clignotement élément actif
         self._flash_timer = QTimer(self)
@@ -84,14 +84,14 @@ class AnnotatedView(QWidget):
 
         self._coord_lbl = QLabel("🖱️  —", self)
         self._coord_lbl.setStyleSheet(
-            "color:#a855f7; background:rgba(0,0,0,185);"
+            "color:#f3d38a; background:rgba(8,14,24,205);"
             "padding:4px 8px; border-radius:4px; font-size:11px;"
         )
         self._coord_lbl.setAttribute(_tp)
 
         self._elem_lbl = QLabel("", self)
         self._elem_lbl.setStyleSheet(
-            "color:#f0f0f0; background:rgba(0,0,0,185);"
+            "color:#dbe4f0; background:rgba(8,14,24,205);"
             "padding:4px 8px; border-radius:4px; font-size:11px;"
         )
         self._elem_lbl.setAttribute(_tp)
@@ -108,15 +108,15 @@ class AnnotatedView(QWidget):
         self._toggle_btn.setFixedSize(114, 26)
         self._toggle_btn.setStyleSheet("""
             QPushButton {
-                background:rgba(20,20,50,200); color:#94a3b8;
-                border:1px solid #3a3a5e; border-radius:5px;
+                background:rgba(11,18,32,210); color:#c6d0e1;
+                border:1px solid #334155; border-radius:6px;
                 font-size:10px; font-weight:bold;
             }
             QPushButton:checked {
-                background:rgba(124,58,237,210); color:#fff;
-                border-color:#a855f7;
+                background:rgba(122,90,31,220); color:#fffdf6;
+                border-color:#d4b46a;
             }
-            QPushButton:hover { border-color:#7c3aed; }
+            QPushButton:hover { border-color:#d4b46a; }
         """)
         self._toggle_btn.toggled.connect(self._on_toggle)
 
@@ -222,8 +222,8 @@ class AnnotatedView(QWidget):
             self._paint_selected_outline(p)
             self._paint_minimap(p)
         else:
-            p.fillRect(self.rect(), QColor("#1a1a2e"))
-            p.setPen(QColor("#4a4a6a"))
+            p.fillRect(self.rect(), QColor("#0b1220"))
+            p.setPen(QColor("#4b5a73"))
             p.setFont(QFont("Arial", 14))
             p.drawText(self.rect(), Qt.AlignmentFlag.AlignCenter,
                        "En attente du premier screenshot…")

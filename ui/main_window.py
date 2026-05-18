@@ -19,11 +19,16 @@ from ui.mapping_editor import MappingEditorDialog
 
 _BTN_CSS = """
 QPushButton {{
-    background:{bg}; color:#fff; border:none;
-    border-radius:6px; padding:6px 14px; font-size:12px; font-weight:bold;
+    background:{bg};
+    color:#f8fafc;
+    border:1px solid {border};
+    border-radius:8px;
+    padding:7px 14px;
+    font-size:12px;
+    font-weight:600;
 }}
-QPushButton:hover    {{ background:{hover}; }}
-QPushButton:disabled {{ background:#3a3a4e; color:#555; }}
+QPushButton:hover    {{ background:{hover}; border-color:{glow}; }}
+QPushButton:disabled {{ background:#2a2f3d; color:#677186; border-color:#323a4b; }}
 """
 
 
@@ -33,7 +38,7 @@ class MainWindow(QMainWindow):
         self.setWindowTitle("TES Mapper — Parse & Mapping dynamique")
         self.resize(1600, 900)
         self.setMinimumSize(1200, 700)
-        self.setStyleSheet("background:#1e1e2e; color:#e2e8f0;")
+        self.setStyleSheet("background:#0f172a; color:#e2e8f0;")
 
         self._screens: List[ScreenInfo] = []
         self._screen_info: Optional[ScreenInfo] = None
@@ -56,8 +61,11 @@ class MainWindow(QMainWindow):
         tb = QToolBar("Contrôles")
         tb.setMovable(False)
         tb.setStyleSheet(
-            "QToolBar { background:#16213e; border:none; padding:4px 8px; spacing:8px; }"
-            "QLabel   { color:#94a3b8; font-size:11px; }"
+            "QToolBar { background:#111827; border:none; padding:6px 10px; spacing:8px; border-bottom:1px solid #2f3a52; }"
+            "QLabel   { color:#c6d0e1; font-size:11px; }"
+            "QComboBox { background:#0b1220; color:#dbe4f0; border:1px solid #374151; border-radius:6px; padding:4px 8px; }"
+            "QComboBox:focus { border-color:#c8a95a; }"
+            "QComboBox QAbstractItemView { background:#0b1220; color:#dbe4f0; }"
         )
         self.addToolBar(tb)
 
@@ -70,30 +78,30 @@ class MainWindow(QMainWindow):
         tb.addSeparator()
 
         self._btn_template = QPushButton("📄 Charger mapping JSON")
-        self._btn_template.setStyleSheet(_BTN_CSS.format(bg="#475569", hover="#334155"))
+        self._btn_template.setStyleSheet(_BTN_CSS.format(bg="#334155", hover="#3f4e66", border="#4b5a73", glow="#c8a95a"))
         self._btn_template.clicked.connect(self._on_load_template)
         tb.addWidget(self._btn_template)
 
         self._btn_parse = QPushButton("📸 Parse")
-        self._btn_parse.setStyleSheet(_BTN_CSS.format(bg="#1d4ed8", hover="#1e40af"))
+        self._btn_parse.setStyleSheet(_BTN_CSS.format(bg="#1e3a8a", hover="#1d4ed8", border="#3b82f6", glow="#93c5fd"))
         self._btn_parse.clicked.connect(self._on_parse)
         self._btn_parse.setEnabled(False)
         tb.addWidget(self._btn_parse)
 
         self._btn_edit = QPushButton("🧩 Éditer mapping")
-        self._btn_edit.setStyleSheet(_BTN_CSS.format(bg="#7c3aed", hover="#6d28d9"))
+        self._btn_edit.setStyleSheet(_BTN_CSS.format(bg="#5b2a86", hover="#6d28d9", border="#8b5cf6", glow="#c4b5fd"))
         self._btn_edit.clicked.connect(self._on_open_mapping_editor)
         self._btn_edit.setEnabled(False)
         tb.addWidget(self._btn_edit)
 
         self._btn_export = QPushButton("🗺️ Export JSON final")
-        self._btn_export.setStyleSheet(_BTN_CSS.format(bg="#059669", hover="#047857"))
+        self._btn_export.setStyleSheet(_BTN_CSS.format(bg="#14532d", hover="#166534", border="#22c55e", glow="#86efac"))
         self._btn_export.clicked.connect(self._on_export_mapping)
         self._btn_export.setEnabled(False)
         tb.addWidget(self._btn_export)
 
         self._template_label = QLabel("Template: non chargé")
-        self._template_label.setStyleSheet("color:#94a3b8; padding-left:8px;")
+        self._template_label.setStyleSheet("color:#c8a95a; padding-left:10px; font-weight:600;")
         tb.addWidget(self._template_label)
 
     def _build_central(self) -> None:
@@ -110,7 +118,7 @@ class MainWindow(QMainWindow):
         self._elem_list.element_clicked.connect(self._on_element_selected_from_list)
 
         splitter = QSplitter(Qt.Orientation.Horizontal)
-        splitter.setStyleSheet("QSplitter::handle { background:#3a3a5e; width:3px; }")
+        splitter.setStyleSheet("QSplitter::handle { background:#2f3a52; width:4px; }")
         splitter.addWidget(self._view)
         splitter.addWidget(self._elem_list)
         splitter.setSizes([1000, 600])
@@ -118,7 +126,7 @@ class MainWindow(QMainWindow):
 
     def _build_statusbar(self) -> None:
         sb = QStatusBar()
-        sb.setStyleSheet("QStatusBar { background:#16213e; color:#94a3b8; font-size:10px; }")
+        sb.setStyleSheet("QStatusBar { background:#111827; color:#c6d0e1; font-size:10px; border-top:1px solid #2f3a52; }")
         self.setStatusBar(sb)
         self._status_state = QLabel("Chargement modèles…")
         self._status_norm = QLabel("🖱️  —")

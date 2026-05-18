@@ -40,26 +40,26 @@ _ALL_SUBTYPES = ["— tous —"] + sorted(_SUBTYPE_COLORS.keys())
 
 _CSS_INPUT = """
 QLineEdit, QComboBox {
-    background:#1e1e2e; color:#e2e8f0;
-    border:1px solid #3a3a5e; border-radius:4px;
+    background:#0b1220; color:#dbe4f0;
+    border:1px solid #334155; border-radius:6px;
     padding:3px 6px; font-size:11px;
 }
-QLineEdit:focus, QComboBox:focus { border-color:#7c3aed; }
-QComboBox QAbstractItemView { background:#1e1e2e; color:#e2e8f0; }
+QLineEdit:focus, QComboBox:focus { border-color:#c8a95a; }
+QComboBox QAbstractItemView { background:#0b1220; color:#dbe4f0; }
 """
 
 _CSS_TABLE = """
 QTableWidget {
-    background:#1e1e2e; color:#e2e8f0;
+    background:#0f172a; color:#dbe4f0;
     border:none; font-size:11px;
-    alternate-background-color:#252535;
-    gridline-color:#252535;
+    alternate-background-color:#131f36;
+    gridline-color:#1e293b;
 }
-QTableWidget::item:selected { background:#7c3aed; color:#fff; }
+QTableWidget::item:selected { background:#7a5a1f; color:#fffdf6; }
 QHeaderView::section {
-    background:#16213e; color:#64748b;
+    background:#111827; color:#c8a95a;
     border:none; padding:3px 4px; font-size:10px;
-    border-bottom:1px solid #3a3a5e;
+    border-bottom:1px solid #2f3a52;
 }
 """
 
@@ -93,11 +93,11 @@ class ElementList(QWidget):
         hdr_row = QHBoxLayout()
         title = QLabel("Éléments détectés")
         title.setFont(QFont("Arial", 11, QFont.Weight.Bold))
-        title.setStyleSheet("color:#e2e8f0; padding:4px 4px 0 4px;")
+        title.setStyleSheet("color:#f3f6fb; padding:4px 4px 0 4px;")
         hdr_row.addWidget(title)
         hdr_row.addStretch()
         self._count_lbl = QLabel("—")
-        self._count_lbl.setStyleSheet("color:#94a3b8; font-size:10px; padding:0 4px;")
+        self._count_lbl.setStyleSheet("color:#b8c4da; font-size:10px; padding:0 4px;")
         hdr_row.addWidget(self._count_lbl)
         root.addLayout(hdr_row)
 
