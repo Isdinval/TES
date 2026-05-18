@@ -193,17 +193,40 @@ class MainWindow(QMainWindow):
         if not self._elements:
             QMessageBox.warning(self, "Aucun élément", "Faites d'abord un Parse.")
             return
+
+        if self._mapping_editor is not None and self._mapping_editor.isVisible():
+            self._mapping_editor.raise_()
+            self._mapping_editor.activateWindow()
+            return
+
         template = self._template or {"software": "unknown", "fields": []}
         editor = MappingEditorDialog(template, self._elements, self)
+        editor.setModal(False)
+        editor.setWindowModality(Qt.WindowModality.NonModal)
+        editor.finished.connect(self._on_mapping_editor_finished)
         self._mapping_editor = editor
+
         if self._elements:
             editor.set_selected_element(self._elements[0])
-        if editor.exec() == editor.DialogCode.Accepted:
+
+        editor.show()
+        editor.raise_()
+        editor.activateWindow()
+
+    @pyqtSlot(int)
+    def _on_mapping_editor_finished(self, result: int) -> None:
+        editor = self._mapping_editor
+        if editor is None:
+            return
+
+        if result == editor.DialogCode.Accepted:
             self._last_mapped = editor.get_result()
             fields = self._last_mapped.get("fields", [])
             n_human = sum(1 for f in fields if f.get("human_validated"))
             self._status_state.setText(f"Édition terminée — {n_human} champs validés humain")
             self._btn_export.setEnabled(True)
+
+        self._mapping_editor = None
 
     @pyqtSlot()
     def _on_export_mapping(self) -> None:
