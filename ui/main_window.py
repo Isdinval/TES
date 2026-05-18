@@ -29,10 +29,10 @@ from config import OMNIPARSER_CONFIG, OLLAMA_CONFIG, AGENT_CONFIG, UI_CONFIG
 from core.screen_capture    import list_screens, ScreenInfo
 from core.omniparser_bridge import OmniParserBridge, UIElement
 from core.parse_task        import ParseOnceTask
-from core.mapper            import build_mapping
 from ui.annotated_view      import AnnotatedView
 from ui.element_list        import ElementList
 from ui.chat_panel          import ChatPanel
+from ui.mapping_editor      import MappingEditorDialog
 
 _BTN_CSS = """
 QPushButton {{
@@ -63,6 +63,7 @@ class MainWindow(QMainWindow):
         self._planner    = None
         self._executor   = None
         self._parse_task: Optional[ParseOnceTask]  = None
+        self._mapping_editor: Optional[MappingEditorDialog] = None
 
         # ── Construction de l'UI ──────────────────────────────────────────
         self._build_toolbar()
@@ -375,7 +376,15 @@ class MainWindow(QMainWindow):
             QMessageBox.critical(self, "Erreur template", f"Impossible de lire le template : {exc}")
             return
 
-        mapped = build_mapping(template, self._elements)
+        editor = MappingEditorDialog(template, self._elements, self)
+        self._mapping_editor = editor
+        if self._elements:
+            editor.set_selected_element(self._elements[0])
+
+        if editor.exec() != editor.DialogCode.Accepted:
+            return
+
+        mapped = editor.get_result()
         out_path, _ = QFileDialog.getSaveFileName(self, "Enregistrer le mapping généré", "mapping_output.json", "JSON (*.json)")
         if not out_path:
             return
@@ -387,9 +396,12 @@ class MainWindow(QMainWindow):
             QMessageBox.critical(self, "Erreur export", f"Impossible d'écrire le JSON : {exc}")
             return
 
-        n_mapped = sum(1 for field in mapped.get("fields", []) if field.get("mapped"))
-        self._chat.add_log(f"🗺️ Mapping exporté : {n_mapped}/{len(mapped.get('fields', []))} champs mappés", "ok")
+        fields = mapped.get("fields", [])
+        n_mapped = sum(1 for field in fields if field.get("mapped"))
+        n_human = sum(1 for field in fields if field.get("human_validated"))
+        self._chat.add_log(f"🗺️ Mapping exporté : {n_mapped}/{len(fields)} mappés | {n_human} validés humain", "ok")
         self._status_state.setText("Mapping exporté")
+
 
     @pyqtSlot()
     def _on_stop(self) -> None:
@@ -431,6 +443,8 @@ class MainWindow(QMainWindow):
         if elem is None:
             return
         self._elem_list.highlight_element(elem.id)
+        if self._mapping_editor is not None:
+            self._mapping_editor.set_selected_element(elem)
         self._chat.add_log(
             f"📍 Clic vue → id={elem.id} [{elem.elem_type}] {elem.label}", "info"
         )
@@ -438,6 +452,8 @@ class MainWindow(QMainWindow):
     @pyqtSlot(object)
     def _on_element_selected_from_list(self, elem) -> None:
         self._view.highlight_element(elem.id)
+        if self._mapping_editor is not None:
+            self._mapping_editor.set_selected_element(elem)
         self._chat.add_log(
             f"📋 Sélection liste → id={elem.id} [{elem.elem_type}] {elem.label}", "info"
         )

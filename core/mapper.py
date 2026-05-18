@@ -49,10 +49,15 @@ def build_mapping(template: Dict[str, Any], elements: List[Any]) -> Dict[str, An
 
         if match is None:
             field["mapped"] = False
-            field["mapping_confidence"] = 0.0
+        field["mapping_source"] = "auto"
+        field["human_validated"] = False
+        field["mapping_confidence"] = 0.0
+        if match is None:
             continue
 
         field["mapped"] = True
+        field["mapping_source"] = "auto"
+        field["human_validated"] = False
         field["mapping_confidence"] = 0.6
         field["detected_label"] = getattr(match, "label", "")
         field["bbox_relative"] = _to_relative_bbox_xywh(getattr(match, "bbox_norm", [0, 0, 0, 0]))

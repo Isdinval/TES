@@ -34,8 +34,14 @@ TES ne pilote pas directement les actions métier : il prépare le terrain avec 
 - `mapped` (booléen),
 - `mapping_confidence` (score de confiance).
 
-### 3) Export
-- Export d'un JSON final prêt à être consommé par un agent local d'automatisation.
+### 3) Édition humaine assistée
+- Validation champ par champ après auto-mapping.
+- Réassignation manuelle d'un champ vers un élément détecté (clic capture/liste).
+- Ajout/suppression de champs et édition des propriétés (`logical_key`, `ui_type`, `path`, `action`).
+- Historique des ajustements pour traçabilité.
+
+### 4) Export
+- Export d'un JSON final prêt à être consommé par un agent local d'automatisation, avec distinction auto-mappé vs validé humain.
 
 ---
 
@@ -65,6 +71,7 @@ TES/
 │
 ├── ui/
 │   ├── main_window.py         # UI principale (parse + export mapping)
+│   ├── mapping_editor.py      # édition humaine dynamique du mapping
 │   ├── annotated_view.py      # vue screenshot annotée
 │   ├── element_list.py        # liste des éléments détectés
 │   ├── chat_panel.py          # journal + interactions UI
