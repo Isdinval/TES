@@ -1,30 +1,20 @@
-# ── Agent GUI — dépendances Python ───────────────────────────────────────────
-
-# ── LangGraph (nouveau) ───────────────────────────────────────────────────────
-langgraph>=0.2.0          # graphe d'agent, StateGraph, END
-langchain-core>=0.2.0     # RunnableConfig, types de base
-
-# ── Interface Qt ──────────────────────────────────────────────────────────────
+# UI
 PyQt6>=6.6.0
 
-# ── Capture d'écran ───────────────────────────────────────────────────────────
+# Capture / image
 mss>=9.0.0
 Pillow>=10.0.0
-
-# ── Automatisation GUI ────────────────────────────────────────────────────────
-pyautogui>=0.9.54
-
-# ── Vision / OmniParser ───────────────────────────────────────────────────────
-torch>=2.1.0
-torchvision>=0.16.0
-transformers>=4.38.0      # Florence-2
-ultralytics>=8.1.0        # YOLO
-supervision>=0.18.0       # BoxAnnotator, Detections
-easyocr>=1.7.0
 opencv-python>=4.9.0
 
-# ── LLM / HTTP ────────────────────────────────────────────────────────────────
-requests>=2.31.0
+# Vision / OmniParser
+torch>=2.1.0
+torchvision>=0.16.0
+transformers>=4.38.0
+ultralytics>=8.1.0
+supervision>=0.18.0
+easyocr>=1.7.0
 
-# ── Utilitaires ───────────────────────────────────────────────────────────────
+# Data / utilitaires
 numpy>=1.26.0
+matplotlib>=3.8.0
+requests>=2.31.0
