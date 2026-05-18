@@ -20,7 +20,7 @@ from PyQt6.QtWidgets import (
     QMainWindow, QWidget, QHBoxLayout, QVBoxLayout,
     QSplitter, QToolBar, QComboBox, QSpinBox,
     QPushButton, QLabel, QStatusBar, QSizePolicy,
-    QMessageBox, QStackedWidget,
+    QMessageBox, QStackedWidget, QFileDialog,
 )
 from PyQt6.QtCore  import Qt, QThread, pyqtSlot
 from PyQt6.QtGui   import QFont, QAction
@@ -28,9 +28,8 @@ from PyQt6.QtGui   import QFont, QAction
 from config import OMNIPARSER_CONFIG, OLLAMA_CONFIG, AGENT_CONFIG, UI_CONFIG
 from core.screen_capture    import list_screens, ScreenInfo
 from core.omniparser_bridge import OmniParserBridge, UIElement
-from core.llm_planner       import LLMPlanner, BatchPlan
-from core.action_executor   import ActionExecutor
-from core.agent_loop        import AgentLoop, ParseOnceTask
+from core.parse_task        import ParseOnceTask
+from core.mapper            import build_mapping
 from ui.annotated_view      import AnnotatedView
 from ui.element_list        import ElementList
 from ui.chat_panel          import ChatPanel
@@ -63,7 +62,6 @@ class MainWindow(QMainWindow):
         self._omniparser = None
         self._planner    = None
         self._executor   = None
-        self._agent:     Optional[AgentLoop]       = None
         self._parse_task: Optional[ParseOnceTask]  = None
 
         # ── Construction de l'UI ──────────────────────────────────────────
@@ -143,11 +141,11 @@ class MainWindow(QMainWindow):
         self._btn_parse.setEnabled(False)
         tb.addWidget(self._btn_parse)
 
-        self._btn_launch = QPushButton("▶  Lancer")
-        self._btn_launch.setStyleSheet(_BTN_CSS.format(bg="#7c3aed", hover="#6d28d9"))
-        self._btn_launch.clicked.connect(self._on_launch)
-        self._btn_launch.setEnabled(False)
-        tb.addWidget(self._btn_launch)
+        self._btn_map_export = QPushButton("🗺️  Export Mapping")
+        self._btn_map_export.setStyleSheet(_BTN_CSS.format(bg="#7c3aed", hover="#6d28d9"))
+        self._btn_map_export.clicked.connect(self._on_export_mapping)
+        self._btn_map_export.setEnabled(False)
+        tb.addWidget(self._btn_map_export)
 
         self._btn_stop = QPushButton("⏹  Stop")
         self._btn_stop.setStyleSheet(_BTN_CSS.format(bg="#dc2626", hover="#b91c1c"))
@@ -275,10 +273,8 @@ class MainWindow(QMainWindow):
             def run(self_):
                 try:
                     self._omniparser = OmniParserBridge(OMNIPARSER_CONFIG)
-                    cfg = OLLAMA_CONFIG.copy()
-                    cfg['model'] = self._model_combo.currentText()
-                    self._planner  = LLMPlanner(cfg)
-                    self._executor = ActionExecutor(AGENT_CONFIG)
+                    self._planner  = None
+                    self._executor = None
                 except Exception as e:
                     self._load_error = str(e)
                 else:
@@ -300,8 +296,8 @@ class MainWindow(QMainWindow):
         self._loading_label.setText("✓ Modèles chargés")
         self._loading_label.setStyleSheet("color:#22c55e; font-size:11px; padding:0 12px;")
         self._btn_parse.setEnabled(True)
-        self._btn_launch.setEnabled(True)
-        self._chat.add_log("✓ OmniParser + Ollama chargés et prêts", "ok")
+        self._btn_map_export.setEnabled(True)
+        self._chat.add_log("✓ OmniParser chargé — mode MAPPER (détection + export JSON)", "ok")
         self._status_state.setText("Prêt")
 
     # ══════════════════════════════════════════════════════════════════════
@@ -339,45 +335,9 @@ class MainWindow(QMainWindow):
             return
         self._current_instruction = instruction
         # Si les modèles sont chargés et aucun agent ne tourne → lancement auto
-        if self._omniparser and self._executor and not (
-            self._agent and self._agent.isRunning()
-        ):
-            self._on_launch_with(instruction)
-        else:
-            self._chat.add_log(
-                "✏️  Instruction stockée — clique sur ▶ Lancer pour exécuter.", "info"
-            )
-
-    def _on_launch_with(self, instruction: str) -> None:
-        """Lance l'agent avec une instruction donnée (évite la duplication de code)."""
-        if not self._screen_info or not self._omniparser:
-            return
-
-        cfg = OLLAMA_CONFIG.copy()
-        cfg['model'] = self._model_combo.currentText()
-        self._planner = LLMPlanner(cfg)
-
-        self._agent = AgentLoop(
-            self._omniparser, self._planner, self._executor,
-            AGENT_CONFIG, self
+        self._chat.add_log(
+            "✏️ Instruction reçue (mode mapper) : faites un Parse puis Export Mapping.", "info"
         )
-        self._agent.set_task(
-            instruction = instruction,
-            screen_info = self._screen_info,
-            max_cycles  = self._cycles_spin.value(),
-        )
-        self._agent.screenshot_ready.connect(self._on_screenshot_ready)
-        self._agent.elements_ready.connect(self._on_elements_ready)
-        self._agent.plan_ready.connect(self._on_plan_ready)
-        self._agent.action_done.connect(self._on_action_done)
-        self._agent.log_message.connect(self._chat.add_log)
-        self._agent.cycle_updated.connect(self._on_cycle_updated)
-        self._agent.task_completed.connect(self._on_task_completed)
-        self._agent.llm_thinking.connect(self._chat.add_llm_thinking)
-
-        self._set_busy(True)
-        self._status_state.setText("Agent en cours…")
-        self._agent.start()
 
     @pyqtSlot()
     def _on_parse(self) -> None:
@@ -398,26 +358,41 @@ class MainWindow(QMainWindow):
         self._parse_task.start()
 
     @pyqtSlot()
-    def _on_launch(self) -> None:
-        if not self._screen_info or not self._omniparser:
+    def _on_export_mapping(self) -> None:
+        if not self._elements:
+            QMessageBox.warning(self, "Aucun élément", "Faites d'abord un parse pour détecter les éléments UI.")
             return
-        instruction = self._chat.get_instruction()
-        if not instruction:
-            # Tente de réutiliser la dernière instruction stockée
-            instruction = self._current_instruction
-        if not instruction:
-            QMessageBox.warning(self, "Instruction manquante",
-                                "Entrez une instruction dans le champ de chat.")
+
+        template_path, _ = QFileDialog.getOpenFileName(self, "Sélectionner le template JSON", "", "JSON (*.json)")
+        if not template_path:
             return
-        self._chat.clear_input()
-        self._chat.add_user_message(instruction)
-        self._on_launch_with(instruction)
+
+        import json
+        try:
+            with open(template_path, "r", encoding="utf-8") as f:
+                template = json.load(f)
+        except Exception as exc:
+            QMessageBox.critical(self, "Erreur template", f"Impossible de lire le template : {exc}")
+            return
+
+        mapped = build_mapping(template, self._elements)
+        out_path, _ = QFileDialog.getSaveFileName(self, "Enregistrer le mapping généré", "mapping_output.json", "JSON (*.json)")
+        if not out_path:
+            return
+
+        try:
+            with open(out_path, "w", encoding="utf-8") as f:
+                json.dump(mapped, f, indent=2, ensure_ascii=False)
+        except Exception as exc:
+            QMessageBox.critical(self, "Erreur export", f"Impossible d'écrire le JSON : {exc}")
+            return
+
+        n_mapped = sum(1 for field in mapped.get("fields", []) if field.get("mapped"))
+        self._chat.add_log(f"🗺️ Mapping exporté : {n_mapped}/{len(mapped.get('fields', []))} champs mappés", "ok")
+        self._status_state.setText("Mapping exporté")
 
     @pyqtSlot()
     def _on_stop(self) -> None:
-        if self._agent and self._agent.isRunning():
-            self._agent.stop()
-            self._chat.add_log("⏹ Arrêt demandé…", "warn")
         if self._parse_task and self._parse_task.isRunning():
             self._parse_task.terminate()
         self._set_busy(False)
@@ -436,61 +411,9 @@ class MainWindow(QMainWindow):
         self._elem_list.update_elements(elements)
         self._view.set_elements(elements)
 
-    @pyqtSlot(object)
-    def _on_plan_ready(self, plan: "BatchPlan"):
-        """Affichage du BatchPlan dans le panneau Chat"""
-        if not plan:
-            return
-
-        html = f"<h3>🧠 Plan Batch — {len(plan.actions)} action(s)</h3>"
-
-        if plan.thinking:
-            html += f"<p><b>Raisonnement :</b><br>{plan.thinking}</p>"
-
-        if plan.reasoning:
-            html += f"<p><b>Synthèse :</b> {plan.reasoning}</p>"
-
-        html += "<h4>Actions planifiées :</h4><ol>"
-
-        for i, step in enumerate(plan.actions, 1):
-            needs = " 📸" if getattr(step, 'needs_screenshot', False) else ""
-            value_str = f" → <code>{step.value}</code>" if getattr(step, 'value', None) else ""
-            elem_str = f" (id={step.element_id})" if getattr(step, 'element_id', None) is not None else ""
-
-            html += f"""
-            <li>
-                <b>{step.action_type}</b>{elem_str}{value_str}{needs}<br>
-                <small style='color:#94a3b8'>{getattr(step, 'reasoning', '') or '—'}</small>
-            </li>
-            """
-
-        html += "</ol>"
-
-        if getattr(plan, 'done', False):
-            html += "<p style='color:#22c55e'><b>✓ Tâche marquée comme TERMINÉE</b></p>"
-
-        # Affichage dans le chat + log simple
-        self._chat.add_log(html, "plan")
-        self._chat.add_log(f"✅ Batch planifié : {len(plan.actions)} action(s)", "ok")
-
-    @pyqtSlot(str, bool)
-    def _on_action_done(self, message: str, success: bool):
-        level = "ok" if success else "error"
-        self._chat.add_log(f"Action exécutée : {message}", level)
-
     @pyqtSlot(int, int)
     def _on_cycle_updated(self, current: int, total: int) -> None:
         self._status_cycle.setText(f"Cycle : {current}/{total}")
-
-    @pyqtSlot(str)
-    def _on_task_completed(self, reason: str) -> None:
-        self._set_busy(False)
-        self._status_state.setText("Terminé")
-        self._chat.add_log(f"🏁 {reason}", "ok")
-        self._chat.add_agent_message(f"Tâche terminée : {reason}")
-        # Arrêt des animations
-        self._view.flash_element(None)
-        self._elem_list.flash_element(None)
 
     # ══════════════════════════════════════════════════════════════════════
     # Interactions vue / liste éléments
@@ -525,7 +448,7 @@ class MainWindow(QMainWindow):
 
     def _set_busy(self, busy: bool, parse_only: bool = False) -> None:
         self._btn_parse.setEnabled(not busy and self._omniparser is not None)
-        self._btn_launch.setEnabled(not busy and self._omniparser is not None)
+        self._btn_map_export.setEnabled(not busy and self._omniparser is not None)
         self._btn_stop.setEnabled(busy)
         self._screen_combo.setEnabled(not busy)
         self._chat.set_input_enabled(not busy)
