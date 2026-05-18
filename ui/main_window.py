@@ -16,6 +16,7 @@ from core.mapper import build_mapping
 from ui.annotated_view import AnnotatedView
 from ui.element_list import ElementList
 from ui.mapping_editor import MappingEditorDialog
+from ui.config_panel import OmniParserConfigDialog
 
 _BTN_CSS = """
 QPushButton {{
@@ -47,6 +48,7 @@ class MainWindow(QMainWindow):
         self._template_path: Optional[str] = None
         self._last_mapped: Optional[dict] = None
         self._mapping_editor: Optional[MappingEditorDialog] = None
+        self._config_dialog: Optional[OmniParserConfigDialog] = None
 
         self._omniparser = None
         self._parse_task: Optional[ParseOnceTask] = None
@@ -99,6 +101,11 @@ class MainWindow(QMainWindow):
         self._btn_export.clicked.connect(self._on_export_mapping)
         self._btn_export.setEnabled(False)
         tb.addWidget(self._btn_export)
+
+        self._btn_config = QPushButton("⚙️ Configuration")
+        self._btn_config.setStyleSheet(_BTN_CSS.format(bg="#3b2f1f", hover="#4d3b24", border="#c8a95a", glow="#f3d38a"))
+        self._btn_config.clicked.connect(self._on_open_config)
+        tb.addWidget(self._btn_config)
 
         self._template_label = QLabel("Template: non chargé")
         self._template_label.setStyleSheet("color:#c8a95a; padding-left:10px; font-weight:600;")
@@ -235,6 +242,29 @@ class MainWindow(QMainWindow):
             self._btn_export.setEnabled(True)
 
         self._mapping_editor = None
+
+
+    @pyqtSlot()
+    def _on_open_config(self) -> None:
+        if self._config_dialog is not None and self._config_dialog.isVisible():
+            self._config_dialog.raise_()
+            self._config_dialog.activateWindow()
+            return
+
+        dialog = OmniParserConfigDialog(self)
+        dialog.setModal(False)
+        dialog.setWindowModality(Qt.WindowModality.NonModal)
+        dialog.config_saved.connect(self._on_config_saved)
+        dialog.finished.connect(lambda _r: setattr(self, "_config_dialog", None))
+        self._config_dialog = dialog
+        dialog.show()
+        dialog.raise_()
+        dialog.activateWindow()
+
+    @pyqtSlot(dict)
+    def _on_config_saved(self, _new_values: dict) -> None:
+        self._status_state.setText("Configuration OmniParser sauvegardée")
+        self._load_models_async()
 
     @pyqtSlot()
     def _on_export_mapping(self) -> None:

@@ -7,13 +7,13 @@ from PyQt6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QFormLayout,
     QLabel, QLineEdit, QSpinBox, QDoubleSpinBox,
     QPushButton, QGroupBox, QMessageBox, QTabWidget,
-    QComboBox
+    QComboBox, QDialog
 )
 from PyQt6.QtCore import pyqtSignal
 import json
 from pathlib import Path
 
-from config import AGENT_CONFIG, OLLAMA_CONFIG, UI_CONFIG
+from config import AGENT_CONFIG, OLLAMA_CONFIG, UI_CONFIG, OMNIPARSER_CONFIG
 
 CONFIG_FILE = Path(__file__).parent.parent / "config_overrides.json"
 
@@ -203,3 +203,98 @@ class ConfigPanel(QWidget):
     def _cancel(self):
         if self.parent():
             self.parent().switch_to_main_view()
+
+class OmniParserConfigDialog(QDialog):
+    config_saved = pyqtSignal(dict)
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setWindowTitle("Configuration OmniParser")
+        self.resize(520, 280)
+        self._build_ui()
+        self._load_from_file()
+        self._load_current_values()
+
+    def _build_ui(self) -> None:
+        layout = QVBoxLayout(self)
+        layout.setContentsMargins(14, 14, 14, 14)
+
+        title = QLabel("⚙️ Paramètres principaux OmniParser")
+        title.setStyleSheet("font-size: 15px; font-weight: 700; color: #c8a95a;")
+        layout.addWidget(title)
+
+        form = QFormLayout()
+
+        self._som_model_path = QLineEdit()
+        self._caption_model_name = QLineEdit()
+        self._caption_model_path = QLineEdit()
+        self._box_threshold = QDoubleSpinBox()
+        self._box_threshold.setRange(0.0001, 1.0)
+        self._box_threshold.setDecimals(4)
+        self._box_threshold.setSingleStep(0.001)
+
+        form.addRow("SOM model path :", self._som_model_path)
+        form.addRow("Caption model name :", self._caption_model_name)
+        form.addRow("Caption model path :", self._caption_model_path)
+        form.addRow("BOX_THRESHOLD :", self._box_threshold)
+        layout.addLayout(form)
+
+        hint = QLabel("Les changements sont sauvegardés dans config_overrides.json et appliqués au prochain parse.")
+        hint.setStyleSheet("color:#94a3b8; font-size:11px;")
+        layout.addWidget(hint)
+
+        actions = QHBoxLayout()
+        actions.addStretch(1)
+        btn_close = QPushButton("Fermer")
+        btn_close.clicked.connect(self.close)
+        btn_save = QPushButton("💾 Sauvegarder")
+        btn_save.clicked.connect(self._save_config)
+        actions.addWidget(btn_close)
+        actions.addWidget(btn_save)
+        layout.addLayout(actions)
+
+    def _load_current_values(self) -> None:
+        self._som_model_path.setText(str(OMNIPARSER_CONFIG.get('som_model_path', '')))
+        self._caption_model_name.setText(str(OMNIPARSER_CONFIG.get('caption_model_name', 'florence2')))
+        self._caption_model_path.setText(str(OMNIPARSER_CONFIG.get('caption_model_path', '')))
+        self._box_threshold.setValue(float(OMNIPARSER_CONFIG.get('BOX_TRESHOLD', 0.005)))
+
+    def _load_from_file(self) -> None:
+        if not CONFIG_FILE.exists():
+            return
+        try:
+            with open(CONFIG_FILE, encoding='utf-8') as f:
+                data = json.load(f)
+            OMNIPARSER_CONFIG.update(data.get('OMNIPARSER_CONFIG', {}))
+        except Exception:
+            pass
+
+    def _save_config(self) -> None:
+        new_values = {
+            'som_model_path': self._som_model_path.text().strip(),
+            'caption_model_name': self._caption_model_name.text().strip() or 'florence2',
+            'caption_model_path': self._caption_model_path.text().strip(),
+            'BOX_TRESHOLD': float(self._box_threshold.value()),
+        }
+
+        OMNIPARSER_CONFIG.update(new_values)
+
+        full = {}
+        if CONFIG_FILE.exists():
+            try:
+                with open(CONFIG_FILE, encoding='utf-8') as f:
+                    full = json.load(f)
+            except Exception:
+                full = {}
+
+        full['OMNIPARSER_CONFIG'] = new_values
+
+        try:
+            with open(CONFIG_FILE, 'w', encoding='utf-8') as f:
+                json.dump(full, f, indent=2, ensure_ascii=False)
+        except Exception as exc:
+            QMessageBox.warning(self, 'Erreur', f'Impossible de sauvegarder: {exc}')
+            return
+
+        self.config_saved.emit(new_values)
+        QMessageBox.information(self, 'Configuration', '✅ Paramètres OmniParser sauvegardés.')
