@@ -26,16 +26,16 @@ class MappingEditorDialog(QDialog):
         self._mapped = build_mapping(self._template, self._elements)
         self._history: List[Dict[str, Any]] = []
         self._selected_element: Optional[Any] = None
+        self._assignment_mode: bool = False
 
         self._build_ui()
         self._reload_table()
+        self._update_action_state()
 
     def set_selected_element(self, elem: Any) -> None:
         self._selected_element = elem
-        if elem is None:
-            self._selected_label.setText("Aucun élément sélectionné")
-        else:
-            self._selected_label.setText(f"Élément sélectionné: id={elem.id} [{elem.subtype}] {elem.label}")
+        self._update_selected_preview()
+        self._update_action_state()
 
     def _build_ui(self) -> None:
         layout = QVBoxLayout(self)
@@ -45,7 +45,14 @@ class MappingEditorDialog(QDialog):
         self._selected_label.setStyleSheet("color:#94a3b8;")
         top.addWidget(self._selected_label)
         top.addStretch(1)
+        self._assignment_mode_label = QLabel("Mode assignation: OFF")
+        self._assignment_mode_label.setStyleSheet("color:#f59e0b;")
+        top.addWidget(self._assignment_mode_label)
         layout.addLayout(top)
+
+        self._selected_preview = QLabel("Cible: —")
+        self._selected_preview.setStyleSheet("color:#64748b; font-size:11px;")
+        layout.addWidget(self._selected_preview)
 
         form = QHBoxLayout()
         self._key_input = QLineEdit()
@@ -75,9 +82,12 @@ class MappingEditorDialog(QDialog):
         self._table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
         self._table.setEditTriggers(QTableWidget.EditTrigger.DoubleClicked | QTableWidget.EditTrigger.SelectedClicked)
         self._table.itemChanged.connect(self._on_item_changed)
+        self._table.itemSelectionChanged.connect(self._update_action_state)
         layout.addWidget(self._table)
 
         actions = QHBoxLayout()
+        self._btn_mode = QPushButton("🟡 Démarrer assignation")
+        self._btn_mode.clicked.connect(self._toggle_assignment_mode)
         self._btn_assign = QPushButton("🎯 Assigner depuis élément sélectionné")
         self._btn_assign.clicked.connect(self._assign_from_selected_element)
         self._btn_remove = QPushButton("🗑️ Supprimer champ")
@@ -89,7 +99,7 @@ class MappingEditorDialog(QDialog):
         self._btn_close = QPushButton("✔️ Terminer")
         self._btn_close.clicked.connect(self.accept)
 
-        for b in [self._btn_assign, self._btn_remove, self._btn_validate, self._btn_recompute, self._btn_close]:
+        for b in [self._btn_mode, self._btn_assign, self._btn_remove, self._btn_validate, self._btn_recompute, self._btn_close]:
             actions.addWidget(b)
         layout.addLayout(actions)
 
@@ -116,6 +126,48 @@ class MappingEditorDialog(QDialog):
                     item.setFlags(item.flags() & ~Qt.ItemFlag.ItemIsEditable)
                 self._table.setItem(r, c, item)
         self._table.blockSignals(False)
+        self._update_action_state()
+
+    def _update_selected_preview(self) -> None:
+        elem = self._selected_element
+        if elem is None:
+            self._selected_label.setText("Aucun élément sélectionné")
+            self._selected_preview.setText("Cible: —")
+            return
+
+        label = getattr(elem, "label", "") or getattr(elem, "description", "") or getattr(elem, "ocr_text", "")
+        self._selected_label.setText(f"Élément sélectionné: id={elem.id} [{elem.subtype}] {label}")
+        cx, cy = getattr(elem, "click_target", (0.0, 0.0))
+        interactive = "oui" if bool(getattr(elem, "is_interactive", False)) else "non"
+        self._selected_preview.setText(
+            f"Cible: id={elem.id} • subtype={getattr(elem, 'subtype', 'unknown')} • interactif={interactive} • click=({cx:.3f}, {cy:.3f})"
+        )
+
+    def _toggle_assignment_mode(self) -> None:
+        self._assignment_mode = not self._assignment_mode
+        self._history.append({"ts": datetime.utcnow().isoformat(), "event": "toggle_assignment_mode", "value": self._assignment_mode})
+        self._update_action_state()
+
+    def _update_action_state(self) -> None:
+        if self._assignment_mode:
+            self._assignment_mode_label.setText("Mode assignation: ON")
+            self._assignment_mode_label.setStyleSheet("color:#22c55e;")
+            self._btn_mode.setText("🟢 Terminer assignation")
+        else:
+            self._assignment_mode_label.setText("Mode assignation: OFF")
+            self._assignment_mode_label.setStyleSheet("color:#f59e0b;")
+            self._btn_mode.setText("🟡 Démarrer assignation")
+
+        self._btn_assign.setEnabled(self._assignment_mode and self._selected_element is not None and self._selected_row() >= 0)
+
+    def _select_next_unvalidated_row(self, start_row: int) -> None:
+        fields = self._mapped.get("fields", [])
+        if not fields:
+            return
+        for idx in range(start_row + 1, len(fields)):
+            if not bool(fields[idx].get("human_validated", False)):
+                self._table.selectRow(idx)
+                return
 
     def _on_item_changed(self, item: QTableWidgetItem) -> None:
         row, col = item.row(), item.column()
@@ -163,6 +215,9 @@ class MappingEditorDialog(QDialog):
         self._reload_table()
 
     def _assign_from_selected_element(self) -> None:
+        if not self._assignment_mode:
+            QMessageBox.information(self, "Mode assignation", "Activez d'abord le mode assignation.")
+            return
         row = self._selected_row()
         if row < 0:
             QMessageBox.information(self, "Sélection", "Sélectionnez d'abord une ligne de champ.")
@@ -184,6 +239,8 @@ class MappingEditorDialog(QDialog):
         f["mapping_confidence"] = 1.0
         self._history.append({"ts": datetime.utcnow().isoformat(), "event": "manual_assign", "logical_key": f.get("logical_key", ""), "element_id": getattr(e, "id", None)})
         self._reload_table()
+        self._select_next_unvalidated_row(row)
+        self._update_action_state()
 
     def _toggle_validated(self) -> None:
         row = self._selected_row()
